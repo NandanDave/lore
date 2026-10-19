@@ -1,7 +1,20 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 serve(async (req) => {
   try {
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    )
+    const { data: { user } } = await userClient.auth.getUser()
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 })
+    }
+
     const { category, message, context } = await req.json()
 
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')

@@ -1,4 +1,5 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -14,6 +15,18 @@ export default {
     }
 
     try {
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user } } = await userClient.auth.getUser();
+
+      if (!user) {
+        return Response.json({ error: "Not authenticated" }, { status: 401 });
+      }
+
       const { model, max_tokens, system, messages } = await req.json();
 
       const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
